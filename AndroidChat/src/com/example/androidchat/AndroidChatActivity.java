@@ -27,6 +27,7 @@ import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.telephony.TelephonyManager;
+import android.text.Editable;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.view.View;
@@ -42,7 +43,13 @@ import com.example.chatserver.ChatterHelper;
 
 public class AndroidChatActivity extends Activity {
 
-    private final String TAG = getClass().getName();
+    private static final int CHAT_LISTENER_TIMEOUT = 1000;
+
+	private static final int REGISTRATION_DELAY = 10000;
+
+	private static final int SERVER_CONNECT_TIMEOUT = 10000;
+
+	private final String TAG = getClass().getName();
 
     private static final int MAX_SCROLL_BUFFER = 4096;
 
@@ -78,7 +85,7 @@ public class AndroidChatActivity extends Activity {
         // The app only works with wifi; communication across networks is too
         // painful
         if (!wifiIsOn()) {
-            showNoWifiDialog();
+            showFatalDialog("Sorry, wifi must be turned on! Exiting!");
             return;
         }
         
@@ -92,7 +99,7 @@ public class AndroidChatActivity extends Activity {
         
         //Show spinning progress bar while we look
         showProgressBar(true);
-        executeNetworkSetupInNonGuiThread();
+        askForServerAddress();
 
         Button b = (Button) findViewById(R.id.sendButton);
 
@@ -119,23 +126,44 @@ public class AndroidChatActivity extends Activity {
                 setProgressBarVisibility(on);
             }});
     }
+
+    private void askForServerAddress() {
+
+    	final EditText input = new EditText(this);
+
+    	new AlertDialog.Builder(this)
+        .setTitle("Server Address")
+        .setMessage("Please enter the address of the chat server")
+        .setView(input)
+        .setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int whichButton) {
+                String serverHostname = input.getText().toString();
+                setupNetworkingInNonGuiThread(serverHostname);
+                //showProgressBar(false);
+            }
+        }).setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int whichButton) {
+                // Do nothing.
+            }
+        }).show();
+    }
     
-    private void executeNetworkSetupInNonGuiThread() {
+    private void setupNetworkingInNonGuiThread(final String serverHostname) {
         // Run our network setup stuff in a non-GUI thread
         new AsyncTask<Object, Object, Object>() {
             @Override
             protected Object doInBackground(Object... nothing) {
-                setupNetworking();
+                setupNetworking(serverHostname);
                 return null;
             }
         }.execute();
     }
 
     /** Show an error dialog and leave the app if wifi is off **/
-    private void showNoWifiDialog() {
+    private void showFatalDialog(String fatalMessage) {
         // FIXME get strings from props
-        new AlertDialog.Builder(this).setTitle("Wifi Not On")
-            .setMessage("Sorry, wifi must be turned on! Exiting!")
+        new AlertDialog.Builder(this).setTitle("ERROR")
+            .setMessage(fatalMessage)
             .setPositiveButton("Close", new DialogInterface.OnClickListener() {
 
                 @Override
@@ -220,7 +248,7 @@ public class AndroidChatActivity extends Activity {
 
         try {
             listenerSocket = new ServerSocket(0); // OS, pick us a socket
-            listenerSocket.setSoTimeout(1000);
+            listenerSocket.setSoTimeout(CHAT_LISTENER_TIMEOUT);
 
             myChatter = new Chatter(myNickname, getLocalIpAddress(), listenerSocket.getLocalPort());
 
@@ -252,11 +280,17 @@ public class AndroidChatActivity extends Activity {
             // don't bother to register
             if (myChatter != null && serverAddress != null) {
 
-                Log.d(TAG,
-                    "Sending my registration info for my nickname " + myChatter.getNickname());
-                clientSocket = new Socket(serverAddress.getAddress(), serverAddress.getPort());
+            	Log.d(TAG, "Connecting to the server...");
+            	
+                clientSocket = new Socket();
+                clientSocket.connect(serverAddress, SERVER_CONNECT_TIMEOUT);
+                
                 BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(
                     clientSocket.getOutputStream()));
+
+                Log.d(TAG,
+                        "Sending my registration info for my nickname " + myChatter.getNickname());
+                
                 ChatterHelper.writeChatter(writer, myChatter);
                 writer.flush();
 
@@ -290,13 +324,23 @@ public class AndroidChatActivity extends Activity {
         }// try
 
         catch (Throwable t) {
+        	Log.e(TAG, "Unable to connect to server", t);
+        	runOnUiThread(new Runnable() {
+
+				@Override
+				public void run() {
+		        	showFatalDialog("Unable to connect to server! Exiting.");
+				}
+        		
+        	});
+        	
             keepConnectingToServer = false;
         }
         finally {
             // Whether or not we could connect to the server, try again in 10
             // secs
             if (keepConnectingToServer) {
-                scheduleNextRegistration(10000);
+                scheduleNextRegistration(REGISTRATION_DELAY);
             }
             if (clientSocket != null) {
                 clientSocket.close();
@@ -427,9 +471,9 @@ public class AndroidChatActivity extends Activity {
         return serial;
     }
 
-    private void setupNetworking() {
+    private void setupNetworking(String serverHostname) {
         try {
-            serverAddress = new InetSocketAddress("coslor.no-ip.biz", 666);
+            serverAddress = new InetSocketAddress(serverHostname, 666);
 
             myAddress = getLocalIpAddress();
 
