@@ -37,3 +37,4 @@ Here are a few:
 5) Allow the users to enter server addresses, nicknames, and other preferences from within settings views in the app, like civilized people.
 6) Refactor where possible to allow for mocking out of some of the network and system services, and thus allow for more test case coverage; there's almost none now.
 7) Make the chat listener in AndroidChatActivity a service that communicates via Intents to the main activity, so that the app will come up whenever it receives a message from a friend
+8) This has been tested with exactly *two* Android devices. Your Mileage May Vary.
