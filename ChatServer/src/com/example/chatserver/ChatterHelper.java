@@ -11,6 +11,11 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * Utility I/O functions for the client and server
+ * @author Chris Coslor
+ *
+ */
 public class ChatterHelper {
 
     private static Pattern inputPattern = Pattern.compile("(.*)@(.*) ([0-9]*)");

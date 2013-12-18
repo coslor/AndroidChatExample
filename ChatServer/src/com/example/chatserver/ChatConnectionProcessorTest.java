@@ -12,6 +12,11 @@ import java.util.List;
 import org.junit.Before;
 import org.junit.Test;
 
+/**
+ * 
+ * @author Chris Coslor
+ *
+ */
 public class ChatConnectionProcessorTest {
 
     String listString = "joe@1.2.3.4 99\r\nfred@5.6.7.8 999\r\nsam@9.a.b.c 9999\r\n";

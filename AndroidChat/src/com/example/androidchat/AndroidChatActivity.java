@@ -41,6 +41,13 @@ import android.widget.TextView;
 import com.example.chatserver.Chatter;
 import com.example.chatserver.ChatterHelper;
 
+/**
+ * AndroidChatActivity is an android-based "chat" app. It uses a central server for lookups,
+ * 	and communicates with other instances directly.
+ *    
+ * @author Chris Coslor
+ *
+ */
 public class AndroidChatActivity extends Activity {
 
     private static final int CHAT_LISTENER_TIMEOUT = 1000;

@@ -3,6 +3,11 @@ package com.example.chatserver;
 import java.io.Serializable;
 import java.net.InetSocketAddress;
 
+/** Chatter represents a chat client.
+ * 
+ * @author Chris Coslor
+ *
+ */
 public class Chatter implements Serializable {
 
     private String nickname;
